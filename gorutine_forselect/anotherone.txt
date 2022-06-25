@@ -1,0 +1,67 @@
+package mainw
+
+import (
+	"encoding/json"
+	"net/http"
+)
+
+package service
+
+import (
+"encoding/json"
+"net/http"
+
+"../entity"
+)
+
+var (
+	ownerService     OwnerService = NewOwnerService()
+	carService       CarService   = NewCarService()
+	carDatachannel                = make(chan *http.Response)
+	ownerDatachannel              = make(chan *http.Response)
+)
+
+type CarDetailsService interface {
+	GetDetails() entity.CarDetails
+}
+
+type service struct{}
+
+func NewCarDetailsService() CarDetailsService {
+	return &service{}
+}
+
+func (*service) GetDetails() entity.CarDetails {
+	go carService.FetchData()
+	go ownerService.FetchData()
+
+	var carData, ownerData *http.Response
+
+	for i := 0; i < 2; i++ {
+		select {
+		case carResponse := <-carDatachannel:
+			carData = carResponse
+		case ownerResponse := <-ownerDatachannel:
+			ownerData = ownerResponse
+		}
+	}
+
+	var car entity.Car
+	var owner entity.Owner
+
+	json.NewDecoder(carData.Body).Decode(&car)
+	json.NewDecoder(ownerData.Body).Decode(&owner)
+
+	return entity.CarDetails{
+		ID:             car.CarData.ID,
+		Brand:          car.CarData.Brand,
+		Model:          car.CarData.Model,
+		Year:           car.CarData.Year,
+		Vin:            car.CarData.Vin,
+		OwnerFirstName: owner.OwnerData.FirstName,
+		OwnerLastName:  owner.OwnerData.LastName,
+		OwnerEmail:     owner.OwnerData.Email,
+		OwnerJobTitle:  owner.OwnerData.JobTitle,
+	}
+}
+

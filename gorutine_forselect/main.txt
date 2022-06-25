@@ -1,0 +1,32 @@
+package main2
+
+import (
+	"fmt"
+	"time"
+)
+
+func main() {
+
+	one := make(chan string)
+	two := make(chan string)
+
+	go func() {
+		time.Sleep(3 * time.Second)
+		one <- "hey"
+	}()
+
+	go func() {
+		time.Sleep(1 * time.Second)
+		two <- "hello"
+	}()
+	//Sirve para reaccionar dependiendo de que canal responde primero.
+	for x := 0; x < 10; x++ {
+		select {
+		case rec1 := <-one:
+			fmt.Println("I received from channel one!", rec1)
+		case rec2 := <-two:
+			fmt.Println("I received from channel two!", rec2)
+		}
+	}
+
+}
